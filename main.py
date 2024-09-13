@@ -1,48 +1,78 @@
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import random
-
-PROTUDE = 10
+# Constants for the curb
+PROTRUDE = 10  # Width of the curb
+CURB_SEGMENT_HEIGHT = 20  # Height of each yellow/black curb segment
 CAR_LENGTH = 100
-VEHICLES = {"car": (40, 100), "jeep": (50, 120), "truck": (50, 180)}
+VEHICLES = {"car": (80, 200), "jeep": (90, 220), "truck": (100, 280)}
 
+def createCurbs(draw, streetWidth, streetHeight, curbWidth, segmentHeight, colors=("yellow", "black")):
+    current_y = 0
+    color_index = 0
+
+    # Draw alternating segments on the left curb
+    while current_y < streetHeight:
+        draw.rectangle(
+            (0, current_y, curbWidth, min(current_y + segmentHeight, streetHeight)),
+            fill=colors[color_index]
+        )
+        color_index = (color_index + 1) % 2  # Alternate between colors
+        current_y += segmentHeight
+
+    # Reset variables for the right curb
+    current_y = 0
+    color_index = 0
+
+    # Draw alternating segments on the right curb
+    while current_y < streetHeight:
+        draw.rectangle(
+            (streetWidth - curbWidth, current_y, streetWidth, min(current_y + segmentHeight, streetHeight)),
+            fill=colors[color_index]
+        )
+        color_index = (color_index + 1) % 2  # Alternate between colors
+        current_y += segmentHeight
 
 def fillLane(image, draw, lane, traffic, vehicles):
-    i = 30
-    while i < image.height:
+    current_y = 30
+    while current_y < image.height:
+        psNoise = random.randint(0, 40)
         if traffic > random.random():
             vehicle = random.choice(list(vehicles.keys()))
             vw, vh = vehicles[vehicle][0], vehicles[vehicle][1]
-
+            paNoise = random.randint(0, 5)
             if lane == "left":
-                draw.rectangle((PROTUDE + 5, i, PROTUDE + 5 + vw, i + vh), fill="black")
-            else:
-                draw.rectangle(
-                    (
-                        image.width - (PROTUDE + 5 + vw),
-                        i,
-                        image.width - (PROTUDE + 5),
-                        i + vh,
-                    ),
+
+                draw.polygon(
+                    [
+                        (PROTRUDE + 5 + paNoise, current_y),
+                        (PROTRUDE + 5 + paNoise + vw, current_y),
+                        (PROTRUDE + 5 - paNoise + vw, current_y + vh),
+                        (PROTRUDE + 5 - paNoise, current_y + vh),
+                    ],
                     fill="black",
                 )
+            else:
+                draw.polygon(
+                    [
+                        (image.width - (PROTRUDE + 5 + vw + paNoise), current_y),
+                        (image.width - (PROTRUDE + 5 + paNoise), current_y),
+                        (image.width - (PROTRUDE + 5 - paNoise), current_y + vh),
+                        (image.width - (PROTRUDE + 5 + vw - paNoise), current_y + vh),
+                    ],
+                    fill="black",
+                )
+                
 
-            i += vh + 5
+            current_y += vh + 5 + psNoise
         else:
-            i += CAR_LENGTH
-
-    pass
-
+            current_y += CAR_LENGTH + psNoise
 
 def createStreet(streetWidth, streetHeight, traffic, vehicles):
     image = Image.new("RGB", (streetWidth, streetHeight), color="white")
-
     draw = ImageDraw.Draw(image)
 
-    # Draw the curbs
-    draw.line((PROTUDE, 0, PROTUDE, streetHeight), fill="black")
-    draw.line(
-        (streetWidth - PROTUDE, 0, streetWidth - PROTUDE, streetHeight), fill="black"
-    )
+    # Draw the curbs with alternating yellow and black
+    createCurbs(draw, streetWidth, streetHeight, PROTRUDE, CURB_SEGMENT_HEIGHT)
 
     # Draw the middle lane marking
     draw.line((streetWidth // 2, 0, streetWidth // 2, streetHeight), fill="black")
@@ -54,8 +84,9 @@ def createStreet(streetWidth, streetHeight, traffic, vehicles):
 
     return image
 
+# Example usage
+streetWidth = 600
+streetHeight = 800
 
-street = createStreet(600, 800, 0.5, VEHICLES)
-
-street.show()
-street.save("street.png")
+street_image = createStreet(streetWidth, streetHeight, 0.7, VEHICLES)
+street_image.show()
