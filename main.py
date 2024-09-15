@@ -1,103 +1,24 @@
-from PIL import Image, ImageDraw
 import random
 
-VEHICLES = {"car": (80, 200), "jeep": (90, 220), "truck": (100, 280)}
-class StreetGenerator:
+from generator import StreetGenerator, VEHICLES
 
-    PROTRUDE = 5
-    CAR_LENGTH = 80
-    CURB_SEGMENT_HEIGHT = 20
-    
 
-    def __init__(self, streetWidth, streetHeight, traffic, vehicles):
-        self.streetWidth = streetWidth
-        self.streetHeight = streetHeight
-        self.traffic = traffic
-        self.vehicles = vehicles
+def genStreets(amount, minStreetWidth, maxStreetWidth, minStreetHeight, maxStreetHeight, minTraffic, maxTraffic, saveDir="streets"):
 
-    def createCurbs(self, draw, curbWidth, segmentHeight, colors=("yellow", "black")):
-        current_y = 0
-        color_index = 0
+    with open(f"{saveDir}/meta_data.csv", "w") as f:
+        f.write("id,width,height,traffic\n")
+        for i in range(amount):
 
-        # Draw alternating segments on the left curb
-        while current_y < self.streetHeight:
-            draw.rectangle(
-                (0, current_y, curbWidth, min(current_y + segmentHeight, self.streetHeight)),
-                fill=colors[color_index]
-            )
-            color_index = (color_index + 1) % 2  # Alternate between colors
-            current_y += segmentHeight
+            streetWidth = random.randrange(minStreetWidth, maxStreetWidth)
+            streetHeight = random.randrange(minStreetHeight, maxStreetHeight)
+            traffic = random.uniform(minTraffic, maxTraffic)
 
-        # Reset variables for the right curb
-        current_y = 0
-        color_index = 0
+            street = StreetGenerator(streetWidth, streetHeight, traffic, VEHICLES)
+            street.createStreet().save(f"{saveDir}/{i}.png")
 
-        # Draw alternating segments on the right curb
-        while current_y < self.streetHeight:
-            draw.rectangle(
-                (self.streetWidth - curbWidth, current_y, self.streetWidth, min(current_y + segmentHeight, self.streetHeight)),
-                fill=colors[color_index]
-            )
-            color_index = (color_index + 1) % 2  # Alternate between colors
-            current_y += segmentHeight
+            f.write(f"{i},{streetWidth},{streetHeight:.2f},{traffic:.2f}\n")
 
-    def fillLane(self, image, draw, lane):
-        current_y = 30
-        while current_y < image.height:
-            psNoise = random.randint(0, 40)
-            if self.traffic > random.random():
-                vehicle = random.choice(list(self.vehicles.keys()))
-                vw, vh = self.vehicles[vehicle][0], self.vehicles[vehicle][1]
-                paNoise = random.randint(0, 5)
-                if lane == "left":
 
-                    draw.polygon(
-                        [
-                            (self.PROTRUDE + 5 + paNoise, current_y),
-                            (self.PROTRUDE + 5 + paNoise + vw, current_y),
-                            (self.PROTRUDE + 5 - paNoise + vw, current_y + vh),
-                            (self.PROTRUDE + 5 - paNoise, current_y + vh),
-                        ],
-                        fill="black",
-                    )
-                else:
-                    draw.polygon(
-                        [
-                            (self.streetWidth- (self.PROTRUDE + 5 + vw + paNoise), current_y),
-                            (self.streetWidth - (self.PROTRUDE + 5 + paNoise), current_y),
-                            (self.streetWidth - (self.PROTRUDE + 5 - paNoise), current_y + vh),
-                            (self.streetWidth - (self.PROTRUDE + 5 + vw - paNoise), current_y + vh),
-                        ],
-                        fill="black",
-                    )
-                   
+    print("Done!")
 
-                current_y += vh + 5 + psNoise
-            else:
-                current_y += self.CAR_LENGTH + psNoise
-
-    def createStreet(self):
-        image = Image.new("RGB", (self.streetWidth, self.streetHeight), color="white")
-        draw = ImageDraw.Draw(image)
-
-        # Draw the curbs with alternating yellow and black
-        self.createCurbs(draw, self.PROTRUDE, self.CURB_SEGMENT_HEIGHT)
-
-        # Draw the middle lane marking
-        draw.line((self.streetWidth // 2, 0, self.streetWidth // 2, self.streetHeight), fill="black")
-
-        # Fill left lane
-        self.fillLane(image, draw, "left")
-        # Fill right lane
-        self.fillLane(image, draw, "right")
-
-        return image
-
-# Example usage
-streetWidth = 600
-streetHeight = 800
-
-street_generator = StreetGenerator(streetWidth, streetHeight, 0.7, VEHICLES)
-street_image = street_generator.createStreet()
-street_image.show()
-
+genStreets(400, 300, 600, 600, 1200, 0.1, 0.6)
